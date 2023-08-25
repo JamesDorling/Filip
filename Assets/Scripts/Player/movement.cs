@@ -38,7 +38,6 @@ public class movement : MonoBehaviour
     //audio source for boosting
     private AudioSource boostAudio;
 
-    //public PhysicMaterial phys; //Physic material
     //Player's rigidbody
     private Rigidbody m_rb;
     void Awake()
@@ -106,16 +105,43 @@ public class movement : MonoBehaviour
         }
 #endif
 
-
-        //Debug.Log("Key pressed");
-
         //Make the player not be able to increase zVel or xVel over the max speed. Also maybe cap the player's velocity.
 
-        //Vector3 relZVel = VelRelToCam(true);
-        //Debug.Log(relZVel);
-        //Vector3 relXVel = VelRelToCam(false);
-        //Debug.Log(relXVel);
+        TakeInputs();
 
+        VelocityDampener();
+
+        if (pb.grounded > 0)
+        {  //If the player is on the ground, apply velocities
+            m_rb.velocity = new Vector3((dir.forward.x * zVel) + (dir.right.x * xVel), m_rb.velocity.y, (dir.forward.z * zVel) + (dir.right.z * xVel));
+        }
+        
+        //Debug.Log(new Vector3((dir.forward.x * zVel) + (dir.right.x * xVel), m_rb.velocity.y, (dir.forward.z * zVel) + (dir.right.z * xVel)));
+
+        if (Input.GetKey(KeyCode.LeftShift))
+        {
+            StartCoroutine(BoostCooldown()); //Boost coroutine starts upon shift pressed
+            Debug.Log("Boost Pressed!");
+        }
+    }
+
+    void VelocityDampener()
+    {
+        if (!Input.GetKey(KeyCode.S) && !Input.GetKey(KeyCode.W) && pb.grounded > 0)
+        {
+            zVel = Mathf.Lerp(zVel, 0, 0.25f); //Lerp zvel down if w and s not pressed
+            //m_rb.velocity = new Vector3(m_rb.velocity.x * dir.right.x, m_rb.velocity.y, m_rb.velocity.z * dir.right.z);
+        }
+
+        if (!Input.GetKey(KeyCode.A) && !Input.GetKey(KeyCode.D) && pb.grounded > 0)
+        {
+            xVel = Mathf.Lerp(xVel, 0, 0.25f); //Lerp xvel if a and d not pressed
+            //m_rb.velocity = new Vector3(m_rb.velocity.x * dir.forward.x, m_rb.velocity.y, m_rb.velocity.z * dir.forward.z);
+        }
+    }
+
+    void TakeInputs()
+    {
         if (Input.GetKey(KeyCode.W) && pb.grounded > 0 && zVel <= m_maxSpeed)
         { //Spent the longest time with this not working, just to find out the player was encountering friction on the gun he was holding.
             if (zVel < -2f) //Limit zvel if goiong in the other direction
@@ -129,7 +155,7 @@ public class movement : MonoBehaviour
 
         if (Input.GetKey(KeyCode.A) && pb.grounded > 0 && xVel >= -m_maxSpeed)
         {
-            if(xVel > 2f) //Limit xvel if goiong in the other direction
+            if (xVel > 2f) //Limit xvel if goiong in the other direction
             {
                 xVel = 2f;
                 //xVel = Mathf.Clamp(zVel, 0, 1f);
@@ -143,7 +169,7 @@ public class movement : MonoBehaviour
             {
                 zVel = 2f;
                 //zVel = Mathf.Clamp(zVel, 0, 1f);
-               // Debug.Log("Backward slowdown");
+                // Debug.Log("Backward slowdown");
             }
             zVel -= m_speed; //Add to zvel
         }
@@ -157,33 +183,6 @@ public class movement : MonoBehaviour
             }
             xVel += m_speed; //add to xvel
         }
-
-        if (!Input.GetKey(KeyCode.S) && !Input.GetKey(KeyCode.W) && pb.grounded > 0)
-        { 
-            zVel = Mathf.Lerp(zVel, 0, 0.25f); //Lerp zvel down if w and s not pressed
-            //m_rb.velocity = new Vector3(m_rb.velocity.x * dir.right.x, m_rb.velocity.y, m_rb.velocity.z * dir.right.z);
-        }
-
-        if (!Input.GetKey(KeyCode.A) && !Input.GetKey(KeyCode.D) && pb.grounded > 0)
-        {
-            xVel = Mathf.Lerp(xVel, 0, 0.25f); //Lerp xvel if a and d not pressed
-            //m_rb.velocity = new Vector3(m_rb.velocity.x * dir.forward.x, m_rb.velocity.y, m_rb.velocity.z * dir.forward.z);
-        }
-
-        if (pb.grounded > 0)
-        {
-          m_rb.velocity = new Vector3((dir.forward.x * zVel) + (dir.right.x * xVel), m_rb.velocity.y, (dir.forward.z * zVel) + (dir.right.z * xVel)); //Used to be "Move()"
-        }
-        
-        //Debug.Log(new Vector3((dir.forward.x * zVel) + (dir.right.x * xVel), m_rb.velocity.y, (dir.forward.z * zVel) + (dir.right.z * xVel)));
-
-        if (Input.GetKey(KeyCode.LeftShift))
-        {
-            StartCoroutine(BoostCooldown()); //Boost coroutine starts upon shift pressed
-            //Debug.Log("Boost");
-        }
-
-        //Debug.Log(new Vector2(zVel, xVel));
     }
 
     void Update()
@@ -204,9 +203,9 @@ public class movement : MonoBehaviour
         }
 
         if(grappled == true && pb.grounded > 0) //If the player has grappled and landed afterwards, cut of velocity
-        { //This is because without it velocity will be saved afterwards and therefore potentially mean the player will run off the edge. Also, if I just reset xVel and zVel whenever airborn / airborn and grappling, boosting in the air becomes practically worthless.
-            //xVel = 0;
-            //zVel = 0;
+        { 
+            //This is because without it velocity will be saved afterwards and therefore potentially mean the player will run off the edge.
+            //Also, if I just reset xVel and zVel whenever airborn / airborn and grappling, boosting in the air becomes practically worthless.
             xVel = xVel / 3;
             zVel = zVel / 3;
             grappled = false;
@@ -303,7 +302,7 @@ public class movement : MonoBehaviour
         m_maxSpeed = i;
         switch(boostable) 
         {
-            case true: //If boostable is true
+            case true: //If boostable is true. This is needed for if they decide to turn back, it will re-enable the boost.
                 maxBoostSpeed = 40f; //Dont change boostable value
                 break;
             case false: //Else
